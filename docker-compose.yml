@@ -1,0 +1,78 @@
+version: "3.9"
+services:
+  rabbitmq:
+    image: rabbitmq:3.9.5-management-alpine
+    container_name: 'rabbitmq'
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - rabbitmq_net
+
+  influxdb:
+    image: influxdb:2.0-alpine
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb-storage:/var/lib/influxdb
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=adminpass
+      - DOCKER_INFLUXDB_INIT_ORG=chnu
+      - DOCKER_INFLUXDB_INIT_BUCKET=log_bucket
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=admintoken
+    entrypoint: [ "./entrypoint.sh" ]
+    networks:
+      - rabbitmq_net
+
+  postgres:
+    image: postgres
+    restart: always
+    hostname: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: mapreduce
+    ports:
+      - "5432:5432"
+    networks:
+      - rabbitmq_net
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8080:8080"
+    networks:
+      - rabbitmq_net
+
+  publisher:
+    image: publisher
+    build:
+      context: ./
+      dockerfile: Dockerfile_publisher
+    ports:
+      - "5000:5000"
+    networks:
+      - rabbitmq_net
+
+  subscriber:
+    image: subscriber
+    restart: on-failure
+    build:
+      context: ./
+      dockerfile: Dockerfile_subscriber
+    depends_on:
+      - rabbitmq
+      - influxdb
+    networks:
+      - rabbitmq_net
+    network-mode:
+     - bridge
+
+volumes:
+  influxdb-storage:
+
+networks:
+  rabbitmq_net:
+    driver: bridge
