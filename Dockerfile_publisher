@@ -1,0 +1,8 @@
+FROM python:3.9-slim-buster
+WORKDIR /usr/src/publisher
+COPY ./publisher /usr/src/publisher
+RUN apt update && \
+    apt install gcc python3-dev -y libpq-dev -y
+RUN pip install -r ./requirements.txt
+EXPOSE 5000
+CMD [ "python3", "-m" , "flask", "run", "--host=0.0.0.0", "--port=5000"]

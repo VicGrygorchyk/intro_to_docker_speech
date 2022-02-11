@@ -1,0 +1,19 @@
+ARG IMAGE_VARIANT=slim-buster
+ARG OPENJDK_VERSION=8
+ARG PYTHON_VERSION=3.9.8
+
+FROM python:${PYTHON_VERSION}-${IMAGE_VARIANT} AS py3
+FROM openjdk:${OPENJDK_VERSION}-${IMAGE_VARIANT}
+
+COPY --from=py3 / /
+
+ARG PYSPARK_VERSION=3.2.0
+WORKDIR /usr/src/myspark_dir
+COPY ./data_pipeline /usr/src/myspark_dir
+VOLUME /home/user
+RUN pip --no-cache-dir install pyspark==${PYSPARK_VERSION}
+RUN apt update && \
+    apt install gcc python3-dev -y libpq-dev -y && \
+    apt install postgresql -y
+RUN pip install -r ./requirements.txt
+EXPOSE 4040
